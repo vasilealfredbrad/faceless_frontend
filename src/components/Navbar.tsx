@@ -1,6 +1,6 @@
 import { Session } from "@supabase/supabase-js";
 import { Link, useLocation } from "react-router-dom";
-import { Video, LogOut, LogIn, ShieldCheck, LayoutDashboard } from "lucide-react";
+import { Video, LogOut, LogIn, ShieldCheck, LayoutDashboard, CreditCard } from "lucide-react";
 
 interface NavbarProps {
   session: Session | null;
@@ -12,6 +12,7 @@ interface NavbarProps {
 export default function Navbar({ session, isAdmin, onLogin, onLogout }: NavbarProps) {
   const location = useLocation();
   const isDashboard = location.pathname === "/dashboard";
+  const isPricing = location.pathname === "/pricing";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-white/5">
@@ -29,6 +30,17 @@ export default function Navbar({ session, isAdmin, onLogin, onLogout }: NavbarPr
               FAQ
             </a>
           )}
+          <Link
+            to="/pricing"
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+              isPricing
+                ? "text-primary"
+                : "text-white/60 hover:text-white"
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span className="hidden sm:inline">Pricing</span>
+          </Link>
           {session && (
             <Link
               to="/dashboard"

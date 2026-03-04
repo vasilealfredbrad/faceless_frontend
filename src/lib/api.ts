@@ -43,6 +43,8 @@ export interface BulkProgress {
   step: string;
 }
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
+
 export async function generateVideo(
   req: GenerateRequest,
   onProgress?: (step: string) => void,
@@ -50,10 +52,10 @@ export async function generateVideo(
   onVariationComplete?: (result: GenerateResponse) => void,
 ): Promise<GenerateResponse[]> {
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) throw new Error("Not authenticated");
+  if (!session) throw new Error("Not authenticated");
 
   const topic = req.topic.trim().slice(0, 500);
   if (!topic) throw new Error("Topic is required");
@@ -61,27 +63,27 @@ export async function generateVideo(
   if (!req.voice) throw new Error("Voice is required");
   if (!req.background) throw new Error("Background is required");
 
-  const count = Math.max(1, Math.min(6, req.variations || 1));
+  const res = await fetch(`${BACKEND_URL}/api/jobs/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      topic,
+      duration: req.duration,
+      voice: req.voice,
+      background: req.background,
+      variations: req.variations || 1,
+    }),
+  });
 
-  const rows = Array.from({ length: count }, () => ({
-    user_id: user.id,
-    topic,
-    duration: req.duration,
-    voice: req.voice,
-    background: req.background,
-    status: "pending" as const,
-  }));
-
-  const { data: jobs, error: insertError } = await supabase
-    .from("jobs")
-    .insert(rows)
-    .select();
-
-  if (insertError || !jobs || jobs.length === 0) {
-    throw new Error(insertError?.message || "Failed to create jobs");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to create jobs" }));
+    throw new Error(err.message || err.error || "Failed to create jobs");
   }
 
-  const jobIds = jobs.map((j) => j.id as string);
+  const { jobIds } = await res.json();
   if (onProgress) onProgress(STATUS_LABELS.pending);
 
   return new Promise<GenerateResponse[]>((resolve, reject) => {
@@ -152,7 +154,7 @@ export async function generateVideo(
               if (results.size === jobIds.length) {
                 settled = true;
                 cleanup();
-                resolve(jobIds.map((id) => results.get(id)!));
+                resolve(jobIds.map((id: string) => results.get(id)!));
                 return;
               }
             }
@@ -172,7 +174,7 @@ export async function generateVideo(
       channels.push(channel);
     }
 
-    const timeoutMs = count * 10 * 60 * 1000;
+    const timeoutMs = jobIds.length * 10 * 60 * 1000;
     setTimeout(() => {
       if (!settled) {
         settled = true;
@@ -181,6 +183,75 @@ export async function generateVideo(
       }
     }, timeoutMs);
   });
+}
+
+export interface GuestGenerateRequest {
+  topic: string;
+  duration: 30 | 60;
+  voice: string;
+  background: string;
+}
+
+export async function guestGenerate(req: GuestGenerateRequest): Promise<{ jobId: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/guest/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic: req.topic.trim().slice(0, 500),
+      duration: req.duration,
+      voice: req.voice,
+      background: req.background,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to create guest job" }));
+    throw new Error(err.message || err.error || "Failed to create guest job");
+  }
+
+  return res.json();
+}
+
+export interface QuotaInfo {
+  tier: string;
+  used: number;
+  limit: number;
+  maxVariations: number;
+  freeTierEnabled: boolean;
+}
+
+export async function getQuota(): Promise<QuotaInfo> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch(`${BACKEND_URL}/api/jobs/quota`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch quota");
+  return res.json();
+}
+
+export async function createStripeCheckout(plan: "starter" | "growth" | "creator"): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch(`${BACKEND_URL}/api/stripe/checkout`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ plan }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to start checkout" }));
+    throw new Error(err.error || "Failed to start checkout");
+  }
+
+  const { url } = await res.json();
+  window.location.href = url;
 }
 
 export interface JobRecord {
@@ -230,8 +301,6 @@ export interface CategoryInfo {
   clips30: number;
   clips60: number;
 }
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
 
 export async function getCategories(): Promise<CategoryInfo[]> {
   if (!BACKEND_URL) return [];
@@ -313,4 +382,33 @@ export async function downloadYouTubeBackground(
 
   if (lastResult) return lastResult;
   throw new Error("No result received");
+}
+
+export async function getAdminSettings(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch(`${BACKEND_URL}/api/admin/settings`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  const { settings } = await res.json();
+  return settings;
+}
+
+export async function updateAdminSettings(settings: Record<string, string>): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch(`${BACKEND_URL}/api/admin/settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ settings }),
+  });
+
+  if (!res.ok) throw new Error("Failed to save settings");
 }

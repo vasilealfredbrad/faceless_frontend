@@ -1,4 +1,5 @@
 import { Sparkles, Play } from "lucide-react";
+import GuestGenerator from "./GuestGenerator";
 
 interface HeroProps {
   onStart: () => void;
@@ -32,6 +33,8 @@ export default function Hero({ onStart }: HeroProps) {
           <Play className="w-5 h-5 fill-current" />
           START FOR FREE
         </button>
+
+        <GuestGenerator onSignUp={onStart} />
       </div>
     </section>
   );

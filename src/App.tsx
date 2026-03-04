@@ -11,8 +11,10 @@ import AuthModal from "./components/AuthModal";
 import Preview from "./pages/Preview";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
+import Pricing from "./pages/Pricing";
 import { supabase } from "./lib/supabase";
 import { checkIsAdmin, clearAdminCache } from "./lib/admin";
+import { getQuota, QuotaInfo } from "./lib/api";
 
 function LandingPage({
   session,
@@ -55,11 +57,15 @@ function LandingPage({
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [tier, setTier] = useState("free");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      if (s) checkIsAdmin().then(setIsAdmin);
+      if (s) {
+        checkIsAdmin().then(setIsAdmin);
+        getQuota().then((q) => setTier(q.tier)).catch(() => {});
+      }
     });
     const {
       data: { subscription },
@@ -67,8 +73,10 @@ export default function App() {
       setSession(s);
       if (s) {
         checkIsAdmin().then(setIsAdmin);
+        getQuota().then((q) => setTier(q.tier)).catch(() => {});
       } else {
         setIsAdmin(false);
+        setTier("free");
         clearAdminCache();
       }
     });
@@ -98,6 +106,10 @@ export default function App() {
               onLogout={() => supabase.auth.signOut()}
             />
           }
+        />
+        <Route
+          path="/pricing"
+          element={<Pricing session={session} tier={tier} />}
         />
         <Route path="/preview/:jobId" element={<Preview />} />
         <Route path="/admin" element={<Admin session={session} />} />

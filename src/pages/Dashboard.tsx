@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
 import VideoGenerator from "../components/VideoGenerator";
 import Navbar from "../components/Navbar";
-import { getUserJobs, getSignedVideoUrl, JobRecord } from "../lib/api";
+import { getUserJobs, getSignedVideoUrl, getQuota, QuotaInfo, JobRecord } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import {
   Play,
@@ -17,6 +17,7 @@ import {
   XCircle,
   RefreshCw,
   Video,
+  ArrowUpRight,
 } from "lucide-react";
 
 interface Props {
@@ -58,12 +59,18 @@ export default function Dashboard({ session, isAdmin, onLogout }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewScript, setPreviewScript] = useState<string | null>(null);
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
 
   useEffect(() => {
     if (!session) {
       navigate("/", { replace: true });
     }
   }, [session, navigate]);
+
+  useEffect(() => {
+    if (!session) return;
+    getQuota().then(setQuota).catch(() => {});
+  }, [session]);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -145,6 +152,25 @@ export default function Dashboard({ session, isAdmin, onLogout }: Props) {
             </h1>
             <p className="text-white/40 text-sm mt-1">Create and manage your videos</p>
           </div>
+
+          {quota && quota.tier === "free" && (
+            <div className="mb-6 rounded-xl bg-primary/5 border border-primary/15 px-5 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-white/60">
+                  <span className="font-semibold text-white">{quota.used}</span> of{" "}
+                  <span className="font-semibold text-white">{quota.limit}</span> daily videos used
+                  <span className="text-white/30 ml-2">Free tier</span>
+                </div>
+              </div>
+              <Link
+                to="/pricing"
+                className="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary-light transition-colors"
+              >
+                Upgrade
+                <ArrowUpRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Left column: Video Preview */}
