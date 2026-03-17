@@ -1,15 +1,16 @@
 import { Session } from "@supabase/supabase-js";
 import { Link, useLocation } from "react-router-dom";
-import { Video, LogOut, LogIn, ShieldCheck, LayoutDashboard, CreditCard } from "lucide-react";
+import { Video, LogOut, LogIn, UserPlus, ShieldCheck, LayoutDashboard, CreditCard } from "lucide-react";
+import type { AuthMode } from "./AuthModal";
 
 interface NavbarProps {
   session: Session | null;
   isAdmin: boolean;
-  onLogin: () => void;
+  onOpenAuth: (mode: AuthMode) => void;
   onLogout: () => void;
 }
 
-export default function Navbar({ session, isAdmin, onLogin, onLogout }: NavbarProps) {
+export default function Navbar({ session, isAdmin, onOpenAuth, onLogout }: NavbarProps) {
   const location = useLocation();
   const isDashboard = location.pathname === "/dashboard";
   const isPricing = location.pathname === "/pricing";
@@ -76,13 +77,22 @@ export default function Navbar({ session, isAdmin, onLogin, onLogout }: NavbarPr
               Log Out
             </button>
           ) : (
-            <button
-              onClick={onLogin}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
-            >
-              <LogIn className="w-4 h-4" />
-              Sign In
-            </button>
+            <>
+              <button
+                onClick={() => onOpenAuth("login")}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-white/70 hover:text-white border border-white/10 rounded-lg transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                Login
+              </button>
+              <button
+                onClick={() => onOpenAuth("register")}
+                className="flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Sign Up
+              </button>
+            </>
           )}
         </div>
       </div>

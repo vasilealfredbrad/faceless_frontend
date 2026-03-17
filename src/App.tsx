@@ -7,27 +7,24 @@ import ResultsMarquee from "./components/ResultsMarquee";
 import HowItWorks from "./components/HowItWorks";
 import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
-import AuthModal from "./components/AuthModal";
+import AuthModal, { type AuthMode } from "./components/AuthModal";
 import Preview from "./pages/Preview";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import { supabase } from "./lib/supabase";
 import { checkIsAdmin, clearAdminCache } from "./lib/admin";
-import { getQuota, QuotaInfo } from "./lib/api";
 
 function LandingPage({
   session,
   isAdmin,
-  onLogin,
   onLogout,
 }: {
   session: Session | null;
   isAdmin: boolean;
-  onLogin: () => void;
   onLogout: () => void;
 }) {
-  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
 
   if (session) {
     return <Navigate to="/dashboard" replace />;
@@ -38,18 +35,21 @@ function LandingPage({
       <Navbar
         session={session}
         isAdmin={isAdmin}
-        onLogin={() => {
-          onLogin();
-          setShowAuth(true);
-        }}
+        onOpenAuth={(mode) => setAuthMode(mode)}
         onLogout={onLogout}
       />
-      <Hero onStart={() => setShowAuth(true)} />
+      <Hero onStart={() => setAuthMode("register")} />
       <ResultsMarquee />
       <HowItWorks />
       <FAQ />
       <Footer />
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {authMode && (
+        <AuthModal
+          mode={authMode}
+          onClose={() => setAuthMode(null)}
+          onSwitchMode={setAuthMode}
+        />
+      )}
     </div>
   );
 }
@@ -57,15 +57,11 @@ function LandingPage({
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [tier, setTier] = useState("free");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      if (s) {
-        checkIsAdmin().then(setIsAdmin);
-        getQuota().then((q) => setTier(q.tier)).catch(() => {});
-      }
+      if (s) checkIsAdmin().then(setIsAdmin);
     });
     const {
       data: { subscription },
@@ -73,10 +69,8 @@ export default function App() {
       setSession(s);
       if (s) {
         checkIsAdmin().then(setIsAdmin);
-        getQuota().then((q) => setTier(q.tier)).catch(() => {});
       } else {
         setIsAdmin(false);
-        setTier("free");
         clearAdminCache();
       }
     });
@@ -92,7 +86,6 @@ export default function App() {
             <LandingPage
               session={session}
               isAdmin={isAdmin}
-              onLogin={() => {}}
               onLogout={() => supabase.auth.signOut()}
             />
           }
@@ -109,7 +102,13 @@ export default function App() {
         />
         <Route
           path="/pricing"
-          element={<Pricing session={session} tier={tier} />}
+          element={
+            <Pricing
+              session={session}
+              isAdmin={isAdmin}
+              onLogout={() => supabase.auth.signOut()}
+            />
+          }
         />
         <Route path="/preview/:jobId" element={<Preview />} />
         <Route path="/admin" element={<Admin session={session} />} />
