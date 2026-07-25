@@ -1,0 +1,32 @@
+import { Link } from "react-router-dom";
+import { Video } from "lucide-react";
+
+export default function Footer() {
+  return (
+    <footer className="border-t border-white/5 py-8 px-4">
+      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-white/40">
+          <Video className="w-5 h-5" />
+          <span className="text-sm">&copy; 2026 invisiblecreator.video</span>
+        </div>
+        <div className="flex items-center gap-6 text-sm text-white/30">
+          <a href="#faq" className="hover:text-white/60 transition-colors">
+            FAQ
+          </a>
+          <Link to="/pricing" className="hover:text-white/60 transition-colors">
+            Pricing
+          </Link>
+          <a href="#generator" className="hover:text-white/60 transition-colors">
+            Generator
+          </a>
+          <Link to="/terms" className="hover:text-white/60 transition-colors">
+            Terms
+          </Link>
+          <Link to="/privacy" className="hover:text-white/60 transition-colors">
+            Privacy
+          </Link>
+        </div>
+      </div>
+    </footer>
+  );
+}
