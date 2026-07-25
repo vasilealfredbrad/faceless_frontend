@@ -13,7 +13,7 @@ import {
   Play,
   Square,
 } from "lucide-react";
-import { getCategories, CategoryInfo, generateFakeTextConversation } from "../../lib/api";
+import { getCategories, CategoryInfo, generateFakeTextConversation, generateFakeTextVideo, FakeTextResult } from "../../lib/api";
 import VOICE_DEMO_FILES from "../../lib/voice-demos";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,14 +54,63 @@ const VOICES = [
   { group: "Male",   voices: ["Noah", "Jasper", "Caleb", "Ethan", "Daniel"] },
 ];
 
-const LUCKY_SCENARIOS = [
-  "I found out my best friend has been talking to my ex behind my back",
-  "My roommate thinks I ate their leftovers but it was actually their dog",
-  "Texting the wrong number and accidentally confessing something huge",
-  "Getting caught lying about being sick to skip work",
-  "Your coworker found your anonymous gossip account",
-  "Finding out a family member won the lottery and told everyone except you",
+interface ScenarioPreset {
+  emoji: string;
+  title: string;
+  category: string;
+  scenario: string;
+  tone: Tone;
+  myName: string;
+  theirName: string;
+  voiceLeft: string;   // voice for "them" (left bubbles)
+  voiceRight: string;  // voice for "me" (right bubbles)
+}
+
+export const SCENARIO_PRESETS: ScenarioPreset[] = [
+  // ── Family ──
+  { emoji: "🚗", title: "I crashed dad's car", category: "Family", tone: "dramatic", myName: "Son", theirName: "Dad", voiceLeft: "Daniel", voiceRight: "Caleb",
+    scenario: "A son slowly confesses to his dad that he crashed the car, but every message reveals the accident was way weirder than it sounds" },
+  { emoji: "📚", title: "Mom found my report card", category: "Family", tone: "suspense", myName: "Kid", theirName: "Mom", voiceLeft: "Hannah", voiceRight: "Ethan",
+    scenario: "Mom texts her kid that the school called about grades, but the kid realizes mom knows something much bigger than a bad grade" },
+  { emoji: "📖", title: "My brother read my diary", category: "Family", tone: "savage", myName: "Sister", theirName: "Brother", voiceLeft: "Jasper", voiceRight: "Emily",
+    scenario: "A sister discovers her brother read her diary and starts dropping hints that she knows HIS secret, which is far worse" },
+  { emoji: "💰", title: "Grandma's strange inheritance", category: "Family", tone: "suspense", myName: "Grandchild", theirName: "Uncle", voiceLeft: "Daniel", voiceRight: "Melody",
+    scenario: "After grandma's funeral, an uncle texts about a locked box she left with one strange rule that must never be broken" },
+  { emoji: "🎰", title: "Lottery secret", category: "Family", tone: "dramatic", myName: "Me", theirName: "Cousin", voiceLeft: "Kaitlyn", voiceRight: "Noah",
+    scenario: "Finding out through a cousin that a family member won the lottery months ago and told everyone in the family except you" },
+  // ── Couples ──
+  { emoji: "📱", title: "Deleted history at 3 AM", category: "Couples", tone: "dramatic", myName: "Husband", theirName: "Wife", voiceLeft: "Autumn", voiceRight: "Caleb",
+    scenario: "A wife asks her husband why the browser history was deleted at 3 AM, and his explanations keep making it worse until a twist reveals the truth" },
+  { emoji: "💔", title: "Saw your wife with someone", category: "Couples", tone: "dramatic", myName: "Husband", theirName: "Best friend", voiceLeft: "Noah", voiceRight: "Daniel",
+    scenario: "A best friend texts that he saw the husband's wife with another man at a restaurant, but the final reveal flips everything" },
+  { emoji: "🌙", title: "Ex texting at 2 AM", category: "Couples", tone: "spicy", myName: "Me", theirName: "Ex", voiceLeft: "Luna", voiceRight: "Jasper",
+    scenario: "An ex texts at 2 AM saying they need to confess something they should have said during the relationship" },
+  // ── Friends ──
+  { emoji: "🐍", title: "Best friend & my ex", category: "Friends", tone: "savage", myName: "Me", theirName: "Bestie", voiceLeft: "Emily", voiceRight: "Kaitlyn",
+    scenario: "Confronting a best friend about secretly talking to my ex, with screenshots as receipts, ending in an unexpected confession" },
+  { emoji: "🎉", title: "Ruined surprise party", category: "Friends", tone: "funny", myName: "Me", theirName: "Friend", voiceLeft: "Ethan", voiceRight: "Melody",
+    scenario: "A friend accidentally reveals the surprise party in the wrong group chat and tries to convince everyone it was a joke" },
+  { emoji: "🦝", title: "Raccoon in the car", category: "Funny", tone: "funny", myName: "Me", theirName: "Bro", voiceLeft: "Jasper", voiceRight: "Noah",
+    scenario: "Discovering a raccoon in a friend's car and the explanations keep getting more absurd until the raccoon situation escalates" },
+  { emoji: "💼", title: "Boss texting at 11 PM", category: "Drama", tone: "suspense", myName: "Employee", theirName: "Boss", voiceLeft: "Daniel", voiceRight: "Hannah",
+    scenario: "A boss texts an employee late at night saying they need to talk before tomorrow's meeting, and the hints get more ominous" },
+  // ── Scary ──
+  { emoji: "🕳️", title: "Neighbor digging at night", category: "Scary", tone: "suspense", myName: "Me", theirName: "Neighbor", voiceLeft: "Daniel", voiceRight: "Luna",
+    scenario: "Texting a neighbor about the digging sounds from their backyard every night at 3 AM, and their answers slowly stop making sense" },
+  { emoji: "📞", title: "Wrong number knows me", category: "Scary", tone: "suspense", myName: "Me", theirName: "Unknown", voiceLeft: "Jasper", voiceRight: "Emily",
+    scenario: "A wrong number apologizes, then casually mentions details about my life no stranger could possibly know" },
+  { emoji: "🚪", title: "Home alone... right?", category: "Scary", tone: "suspense", myName: "Me", theirName: "Roommate", voiceLeft: "Hannah", voiceRight: "Caleb",
+    scenario: "Texting my roommate to stop moving things around the apartment, and they reply that they moved out last week" },
+  { emoji: "📷", title: "It wasn't me on camera", category: "Scary", tone: "dramatic", myName: "Me", theirName: "Sister", voiceLeft: "Melody", voiceRight: "Ethan",
+    scenario: "A sister sends a doorbell camera photo of me entering the house at 2 AM, but I was in another city that night" },
+  // ── Drama/Mystery ──
+  { emoji: "🎭", title: "Catfish revelation", category: "Drama", tone: "dramatic", myName: "Me", theirName: "Online crush", voiceLeft: "Luna", voiceRight: "Noah",
+    scenario: "An online crush of two years finally agrees to meet, then confesses they are not who the photos show — and the truth is stranger" },
+  { emoji: "📍", title: "GPS says you're not there", category: "Drama", tone: "dramatic", myName: "Me", theirName: "Partner", voiceLeft: "Autumn", voiceRight: "Jasper",
+    scenario: "A partner says they are working late, but the shared location shows them somewhere else, and every excuse contradicts the last one" },
 ];
+
+const LUCKY_SCENARIOS = SCENARIO_PRESETS.map((p) => p.scenario);
 
 const TONE_PREVIEWS: Record<Tone, Message[]> = {
   dramatic: [
@@ -459,9 +508,63 @@ export default function FakeTextVideos() {
   const [categories, setCategories]   = useState<CategoryInfo[]>([]);
 
   // Voice
-  const [voice, setVoice]             = useState("Luna");
+  const [voice, setVoice]             = useState("Luna");        // their voice (left bubbles)
+  const [myVoice, setMyVoice]         = useState("Noah");        // my voice (right bubbles)
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const audioRef = useState<HTMLAudioElement | null>(null);
+
+  // Generation
+  const [genLoading, setGenLoading]   = useState(false);
+  const [genProgress, setGenProgress] = useState("");
+  const [genError, setGenError]       = useState("");
+  const [result, setResult]           = useState<FakeTextResult | null>(null);
+
+  function applyPreset(p: ScenarioPreset) {
+    setScenario(p.scenario);
+    setTone(p.tone);
+    setMyName(p.myName);
+    setTheirName(p.theirName);
+    setVoice(p.voiceLeft);
+    setMyVoice(p.voiceRight);
+    setAiMessages(null);
+    setAiError("");
+  }
+
+  async function handleGenerateVideo() {
+    if (genLoading) return;
+    if (!scenario.trim() && !aiMessages) {
+      setGenError("Pick a story idea or write a scenario first.");
+      return;
+    }
+    setGenLoading(true);
+    setGenError("");
+    setResult(null);
+    try {
+      const res = await generateFakeTextVideo(
+        {
+          scenario: scenario.trim(),
+          tone,
+          messageCount,
+          myName,
+          theirName,
+          voiceLeft: voice,
+          voiceRight: myVoice,
+          accentColor: accentColor,
+          platform,
+          background,
+          duration,
+          messages: aiMessages ?? undefined,
+        },
+        (step) => setGenProgress(step),
+      );
+      setResult(res);
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : "Generation failed");
+    } finally {
+      setGenLoading(false);
+      setGenProgress("");
+    }
+  }
 
   // AI-generated conversation (replaces the canned tone preview when present)
   const [aiMessages, setAiMessages]   = useState<Message[] | null>(null);
@@ -563,11 +666,35 @@ export default function FakeTextVideos() {
               {/* ── Scenario ── */}
               {activeTab === "scenario" && (
                 <>
+                  {/* Story ideas — 18 curated presets that fill everything in */}
+                  <div>
+                    <label className="text-xs font-medium text-white/50 mb-2 block">Story ideas</label>
+                    <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto pr-1">
+                      {SCENARIO_PRESETS.map((p) => (
+                        <button
+                          key={p.title}
+                          onClick={() => applyPreset(p)}
+                          className={`text-left rounded-lg border px-2.5 py-2 transition-colors ${
+                            scenario === p.scenario
+                              ? "border-pink-500/50 bg-pink-500/15"
+                              : "border-white/10 bg-surface hover:bg-white/5"
+                          }`}
+                        >
+                          <span className="text-sm">{p.emoji}</span>
+                          <span className={`ml-1.5 text-[11px] font-semibold ${scenario === p.scenario ? "text-pink-400" : "text-white/70"}`}>
+                            {p.title}
+                          </span>
+                          <span className="block text-[9px] uppercase tracking-wide text-white/25 mt-0.5">{p.category} · {p.myName} & {p.theirName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <label className="text-xs font-medium text-white/50">Conversation scenario</label>
                       <button
-                        onClick={() => setScenario(LUCKY_SCENARIOS[Math.floor(Math.random() * LUCKY_SCENARIOS.length)])}
+                        onClick={() => applyPreset(SCENARIO_PRESETS[Math.floor(Math.random() * SCENARIO_PRESETS.length)])}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-surface hover:bg-white/5 text-white/60 text-xs font-semibold"
                       >
                         <Wand2 className="w-3.5 h-3.5" /> Suggest
@@ -757,40 +884,45 @@ export default function FakeTextVideos() {
                     </div>
                   </div>
 
-                  {/* Voice */}
-                  <div className="border-t border-white/5 pt-5">
-                    <p className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-3">
-                      <span className="flex items-center gap-1.5"><Mic className="w-3.5 h-3.5" />Narrator Voice</span>
-                    </p>
-                    <div className="space-y-3">
-                      {VOICES.map((group) => (
-                        <div key={group.group}>
-                          <p className="text-[10px] text-white/25 mb-1.5">{group.group}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {group.voices.map((v) => {
-                              const isSelected = voice === v;
-                              const isPlaying  = playingVoice === v;
-                              return (
-                                <div
-                                  key={v}
-                                  className={`flex items-center rounded-lg border transition-colors ${
-                                    isSelected ? "border-pink-500/50 bg-pink-500/15" : "border-white/10 bg-surface"
-                                  }`}
-                                >
-                                  <button onClick={() => setVoice(v)} className={`px-2.5 py-1.5 text-xs font-semibold ${isSelected ? "text-pink-400" : "text-white/60 hover:text-white"}`}>
-                                    {v}
-                                  </button>
-                                  <button onClick={() => handlePlayDemo(v)} className="px-1.5 py-1.5 border-l border-white/10 text-white/35 hover:text-white transition-colors">
-                                    {isPlaying ? <Square className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
-                                  </button>
-                                </div>
-                              );
-                            })}
+                  {/* Voices — one per side, real dialogue */}
+                  {([
+                    { label: `${theirName || "Them"}'s voice (left bubbles)`, value: voice, set: setVoice },
+                    { label: `${myName || "Me"}'s voice (right bubbles)`, value: myVoice, set: setMyVoice },
+                  ] as const).map((slot) => (
+                    <div key={slot.label} className="border-t border-white/5 pt-5">
+                      <p className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-3">
+                        <span className="flex items-center gap-1.5"><Mic className="w-3.5 h-3.5" />{slot.label}</span>
+                      </p>
+                      <div className="space-y-3">
+                        {VOICES.map((group) => (
+                          <div key={group.group}>
+                            <p className="text-[10px] text-white/25 mb-1.5">{group.group}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {group.voices.map((v) => {
+                                const isSelected = slot.value === v;
+                                const isPlaying  = playingVoice === v;
+                                return (
+                                  <div
+                                    key={v}
+                                    className={`flex items-center rounded-lg border transition-colors ${
+                                      isSelected ? "border-pink-500/50 bg-pink-500/15" : "border-white/10 bg-surface"
+                                    }`}
+                                  >
+                                    <button onClick={() => slot.set(v)} className={`px-2.5 py-1.5 text-xs font-semibold ${isSelected ? "text-pink-400" : "text-white/60 hover:text-white"}`}>
+                                      {v}
+                                    </button>
+                                    <button onClick={() => handlePlayDemo(v)} className="px-1.5 py-1.5 border-l border-white/10 text-white/35 hover:text-white transition-colors">
+                                      {isPlaying ? <Square className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </>
               )}
 
@@ -844,15 +976,38 @@ export default function FakeTextVideos() {
             {/* Generate button */}
             <div className="px-5 pb-5">
               <button
-                disabled
-                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400/50 font-bold text-sm cursor-not-allowed"
+                onClick={handleGenerateVideo}
+                disabled={genLoading || (!scenario.trim() && !aiMessages)}
+                className={`w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold text-sm transition-colors ${
+                  genLoading || (!scenario.trim() && !aiMessages)
+                    ? "bg-pink-500/10 border border-pink-500/20 text-pink-400/50 cursor-not-allowed"
+                    : "bg-pink-500 hover:bg-pink-600 text-white"
+                }`}
               >
-                <Rocket className="w-4 h-4" />
-                Coming Soon — Generate Video
+                <Rocket className={`w-4 h-4 ${genLoading ? "animate-pulse" : ""}`} />
+                {genLoading ? (genProgress || "Generating...") : "Generate Video"}
               </button>
-              <p className="text-center text-[11px] text-white/20 mt-2">
-                Backend generation in development
-              </p>
+              {genError && <p className="text-center text-[11px] text-red-400 mt-2">{genError}</p>}
+              {!genError && genLoading && (
+                <p className="text-center text-[11px] text-white/30 mt-2">
+                  Two voices, real story arc — usually ready in under a minute.
+                </p>
+              )}
+              {result && !genLoading && (
+                <div className="mt-3 rounded-xl border border-white/10 bg-surface overflow-hidden">
+                  <video src={result.videoUrl} controls playsInline className="w-full aspect-[9/16] max-h-96 bg-black" />
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <span className="text-xs text-accent font-semibold">✓ Video ready</span>
+                    <a
+                      href={result.videoUrl}
+                      download
+                      className="text-xs font-semibold text-pink-400 hover:text-pink-300"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

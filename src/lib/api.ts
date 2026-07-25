@@ -492,6 +492,93 @@ export interface FakeTextMessage {
   text: string;
 }
 
+export interface FakeTextGenerateRequest {
+  scenario: string;
+  tone: string;
+  messageCount: number;
+  myName: string;
+  theirName: string;
+  voiceLeft: string;
+  voiceRight: string;
+  accentColor?: string;
+  platform?: string;
+  background: string;
+  duration: 30 | 60;
+  messages?: FakeTextMessage[];
+}
+
+export interface FakeTextResult {
+  jobId: string;
+  videoUrl: string;
+  thumbnailUrl: string | null;
+  script: string | null;
+}
+
+/**
+ * Create a fake-text video job and poll it to completion.
+ * Polling (not realtime) so it works even when Supabase Realtime is down.
+ */
+export async function generateFakeTextVideo(
+  req: FakeTextGenerateRequest,
+  onProgress?: (step: string) => void,
+): Promise<FakeTextResult> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const row = {
+    user_id: user.id,
+    topic: (req.scenario || "Fake text conversation").trim().slice(0, 500),
+    duration: req.duration,
+    voice: req.voiceRight,
+    background: req.background,
+    status: "pending" as const,
+    job_type: "faketext",
+    payload: {
+      scenario: req.scenario,
+      tone: req.tone,
+      messageCount: req.messageCount,
+      myName: req.myName,
+      theirName: req.theirName,
+      voiceLeft: req.voiceLeft,
+      voiceRight: req.voiceRight,
+      accentColor: req.accentColor,
+      platform: req.platform,
+      ...(req.messages && req.messages.length >= 3 ? { messages: req.messages } : {}),
+    },
+  };
+
+  const { data: job, error } = await supabase.from("jobs").insert(row).select().single();
+  if (error) {
+    if (error.message.includes("job_type") || error.message.includes("payload")) {
+      throw new Error("Fake Text videos need a database update (migration 015). Ask the admin to apply it in Supabase.");
+    }
+    throw new Error(error.message);
+  }
+  const jobId = job.id as string;
+  if (onProgress) onProgress(STATUS_LABELS.pending);
+
+  const startedAt = Date.now();
+  const TIMEOUT_MS = 10 * 60 * 1000;
+
+  while (Date.now() - startedAt < TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, 2500));
+    const { data: j } = await supabase
+      .from("jobs")
+      .select("status, error, video_url, thumbnail_url, script")
+      .eq("id", jobId)
+      .single();
+    if (!j) continue;
+    if (j.status === "completed") {
+      return { jobId, videoUrl: j.video_url as string, thumbnailUrl: j.thumbnail_url, script: j.script };
+    }
+    if (j.status === "failed") {
+      throw new Error(j.error || "Generation failed");
+    }
+    if (onProgress) onProgress(STATUS_LABELS[j.status as JobStatus] || j.status);
+  }
+  throw new Error("Generation timed out. Check your jobs page.");
+}
+
 export async function generateFakeTextConversation(params: {
   scenario: string;
   tone: string;
