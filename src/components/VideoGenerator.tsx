@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
-import { generateVideo, GenerateRequest, getCategories, CategoryInfo, BulkProgress, WordEffectMode, SubtitleSize } from "../lib/api";
+import { generateVideo, GenerateRequest, getCategories, CategoryInfo, BulkProgress, WordEffectMode, SubtitleSize, getQueuePosition, QueuePosition } from "../lib/api";
 import { containsProfanity } from "../lib/profanity";
 import VOICE_DEMO_FILES from "../lib/voice-demos";
 import {
@@ -175,6 +175,8 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
   const [showPipeline, setShowPipeline] = useState(false);
   const [pipelineComplete, setPipelineComplete] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
+  const [queueInfo, setQueueInfo] = useState<QueuePosition | null>(null);
+  const firstJobIdRef = useRef<string | null>(null);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -184,6 +186,22 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
       .then(setCategories)
       .catch(() => {});
   }, []);
+
+  // Poll queue position + ETA while the job is still waiting in the queue.
+  useEffect(() => {
+    if (!loading) { setQueueInfo(null); return; }
+    if (!progress.toLowerCase().includes("queued")) { setQueueInfo(null); return; }
+    let stopped = false;
+    const poll = async () => {
+      const id = firstJobIdRef.current;
+      if (!id) return;
+      const info = await getQueuePosition(id);
+      if (!stopped && info && info.status === "pending") setQueueInfo(info);
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => { stopped = true; clearInterval(interval); };
+  }, [loading, progress]);
 
   // If the selected background has no clips for the chosen duration,
   // auto-switch to the first category that does (avoids doomed jobs).
@@ -310,6 +328,7 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
         },
         (bp) => setBulkProgress(bp),
         (result) => onVideoGenerated?.(result.jobId, result.videoUrl, result.script),
+        (ids) => { firstJobIdRef.current = ids[0] || null; },
       );
       setEndTime(Date.now());
       setPipelineComplete(true);
@@ -414,13 +433,11 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
                       <button
                         key={d}
                         onClick={() => setDuration(d)}
-                        disabled={loading || d === 60}
+                        disabled={loading}
                         className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
                           duration === d
                             ? "bg-primary text-white"
-                            : d === 60
-                              ? "bg-surface text-white/20 cursor-not-allowed"
-                              : "bg-surface text-white/40 hover:text-white/60"
+                            : "bg-surface text-white/40 hover:text-white/60"
                         }`}
                       >
                         {d}s
@@ -741,6 +758,16 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
         </div>
 
         {/* ── Pipeline progress (always visible during generation) ── */}
+        {showPipeline && !pipelineComplete && queueInfo && (
+          <div className="px-5 pb-2 flex items-center gap-2 text-xs text-white/60">
+            <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+            <span>
+              In queue: <span className="text-white font-semibold">{queueInfo.ahead}</span> ahead
+              {queueInfo.active > 0 && <> · {queueInfo.active} processing</>}
+              {" "}· ETA ~<span className="text-white font-semibold">{queueInfo.etaSeconds}s</span>
+            </span>
+          </div>
+        )}
         {showPipeline && !pipelineComplete && (
           <div className="px-5 pb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
             {PIPELINE_STEPS.map((step, i) => {

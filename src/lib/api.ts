@@ -91,6 +91,7 @@ export async function generateVideo(
   onProgress?: (step: string) => void,
   onBulkProgress?: (progress: BulkProgress) => void,
   onVariationComplete?: (result: GenerateResponse) => void,
+  onJobsCreated?: (jobIds: string[]) => void,
 ): Promise<GenerateResponse[]> {
   const {
     data: { user },
@@ -162,6 +163,7 @@ export async function generateVideo(
   }
 
   const jobIds = finalJobs.map((j) => j.id as string);
+  if (onJobsCreated) onJobsCreated(jobIds);
   if (onProgress) onProgress(STATUS_LABELS.pending);
 
   return new Promise<GenerateResponse[]>((resolve, reject) => {
@@ -435,15 +437,77 @@ export async function getDemoVideos(): Promise<DemoVideo[]> {
 }
 
 export async function getCategories(): Promise<CategoryInfo[]> {
-  if (!BACKEND_URL) return [];
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/youtube/categories`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data.categories) ? data.categories : [];
-  } catch {
-    return [];
+  // Try the backend first (freshest data, LAN/dev only)...
+  if (BACKEND_URL) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/youtube/categories`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.categories) && data.categories.length > 0) {
+          return data.categories;
+        }
+      }
+    } catch {
+      // fall through to Supabase
+    }
   }
+  // ...then Supabase — the worker publishes the list to app_settings, so the
+  // deployed frontend gets real categories even without reaching the backend.
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "background_categories")
+      .single();
+    if (data?.value) {
+      const parsed = JSON.parse(data.value);
+      if (Array.isArray(parsed)) return parsed as CategoryInfo[];
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+export interface QueuePosition {
+  status: string;
+  ahead: number;
+  active: number;
+  etaSeconds: number;
+}
+
+export async function getQueuePosition(jobId: string): Promise<QueuePosition | null> {
+  if (!BACKEND_URL) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/queue/position?jobId=${encodeURIComponent(jobId)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export interface FakeTextMessage {
+  side: "left" | "right";
+  text: string;
+}
+
+export async function generateFakeTextConversation(params: {
+  scenario: string;
+  tone: string;
+  messageCount: number;
+  myName: string;
+  theirName: string;
+}): Promise<FakeTextMessage[]> {
+  if (!BACKEND_URL) throw new Error("Backend not reachable from this deployment yet.");
+  const res = await fetch(`${BACKEND_URL}/api/faketext/conversation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Conversation generation failed");
+  return data.messages as FakeTextMessage[];
 }
 
 export interface YouTubeDownloadRequest {

@@ -13,7 +13,7 @@ import {
   Play,
   Square,
 } from "lucide-react";
-import { getCategories, CategoryInfo } from "../../lib/api";
+import { getCategories, CategoryInfo, generateFakeTextConversation } from "../../lib/api";
 import VOICE_DEMO_FILES from "../../lib/voice-demos";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -463,6 +463,31 @@ export default function FakeTextVideos() {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const audioRef = useState<HTMLAudioElement | null>(null);
 
+  // AI-generated conversation (replaces the canned tone preview when present)
+  const [aiMessages, setAiMessages]   = useState<Message[] | null>(null);
+  const [aiLoading, setAiLoading]     = useState(false);
+  const [aiError, setAiError]         = useState("");
+
+  async function handleAiGenerate() {
+    if (!scenario.trim() || aiLoading) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const messages = await generateFakeTextConversation({
+        scenario: scenario.trim(),
+        tone,
+        messageCount,
+        myName,
+        theirName,
+      });
+      setAiMessages(messages);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Generation failed");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
   }, []);
@@ -478,7 +503,7 @@ export default function FakeTextVideos() {
     audioRef[0] = audio;
   }
 
-  const previewMessages = TONE_PREVIEWS[tone].slice(0, Math.min(8, messageCount));
+  const previewMessages = (aiMessages ?? TONE_PREVIEWS[tone]).slice(0, Math.min(8, messageCount));
 
   const TABS: { key: FormTab; label: string; icon: typeof MessageSquare }[] = [
     { key: "scenario",   label: "Scenario",   icon: MessageSquare },
@@ -555,6 +580,24 @@ export default function FakeTextVideos() {
                       rows={3}
                       className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder:text-white/25 focus:outline-none focus:border-pink-500/50 transition-colors text-sm resize-none"
                     />
+                    <button
+                      onClick={handleAiGenerate}
+                      disabled={!scenario.trim() || aiLoading}
+                      className={`mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                        !scenario.trim() || aiLoading
+                          ? "bg-surface text-white/25 cursor-not-allowed border border-white/10"
+                          : "bg-pink-500/15 border border-pink-500/30 text-pink-400 hover:bg-pink-500/25"
+                      }`}
+                    >
+                      <Wand2 className={`w-4 h-4 ${aiLoading ? "animate-pulse" : ""}`} />
+                      {aiLoading ? "Generating conversation..." : "Auto-generate conversation with AI"}
+                    </button>
+                    {aiError && <p className="mt-1.5 text-xs text-red-400">{aiError}</p>}
+                    {aiMessages && !aiError && (
+                      <p className="mt-1.5 text-xs text-accent">
+                        ✓ AI conversation generated — see the live preview. Regenerate anytime.
+                      </p>
+                    )}
                   </div>
 
                   {/* Tone */}
