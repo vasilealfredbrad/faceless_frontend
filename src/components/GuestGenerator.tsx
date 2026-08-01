@@ -23,8 +23,9 @@ import VOICE_DEMO_FILES from "../lib/voice-demos";
 import { containsProfanity } from "../lib/profanity";
 
 const VOICES = [
-  { group: "American Female", voices: ["Autumn", "Melody", "Hannah", "Emily", "Ivy", "Kaitlyn", "Luna", "Willow", "Lauren", "Sierra"] },
-  { group: "American Male", voices: ["Noah", "Jasper", "Caleb", "Ronan", "Ethan", "Daniel", "Zane"] },
+  { group: "American Female", voices: ["Skylar", "Katie", "Julia", "Ella", "Rachel", "Grace", "Lauren", "Michelle", "Jessica", "Caroline"] },
+  { group: "American Male", voices: ["Jameson", "Theo", "Parker", "Austin", "Daniel", "Zander", "Rowan"] },
+  { group: "British", voices: ["Gemma", "Archie"] },
 ];
 
 const SUBTITLE_PRESETS = [
@@ -234,7 +235,7 @@ interface GuestGeneratorProps {
 
 export default function GuestGenerator({ sectionRef }: GuestGeneratorProps) {
   const [topic, setTopic] = useState("");
-  const [voice, setVoice] = useState("Caleb");
+  const [voice, setVoice] = useState("Parker");
   const [subtitlePreset, setSubtitlePreset] = useState("classic");
   const [wordEffectMode, setWordEffectMode] = useState<WordEffectMode>("combo");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);

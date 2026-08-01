@@ -26,8 +26,9 @@ import {
 type FormTab = "content" | "voice" | "subtitles";
 
 const VOICES = [
-  { group: "American Female", voices: ["Autumn", "Melody", "Hannah", "Emily", "Ivy", "Kaitlyn", "Luna", "Willow", "Lauren", "Sierra"] },
-  { group: "American Male", voices: ["Noah", "Jasper", "Caleb", "Ronan", "Ethan", "Daniel", "Zane"] },
+  { group: "American Female", voices: ["Skylar", "Katie", "Julia", "Ella", "Rachel", "Grace", "Lauren", "Michelle", "Jessica", "Caroline"] },
+  { group: "American Male", voices: ["Jameson", "Theo", "Parker", "Austin", "Daniel", "Zander", "Rowan"] },
+  { group: "British", voices: ["Gemma", "Archie"] },
 ];
 
 const SUBTITLE_PRESETS = [
@@ -156,7 +157,7 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
   const [activeTab, setActiveTab] = useState<FormTab>("content");
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState<30 | 60>(30);
-  const [voice, setVoice] = useState("Noah");
+  const [voice, setVoice] = useState("Jameson");
   const [background, setBackground] = useState("minecraft");
   const [variations, setVariations] = useState(1);
   const [subtitlePreset, setSubtitlePreset] = useState("classic");

@@ -50,8 +50,8 @@ const BUBBLE_COLORS = ["#E1306C", "#007AFF", "#25D366", "#0084FF", "#AF52DE", "#
 const MESSAGE_COUNTS = [6, 10, 14, 20] as const;
 
 const VOICES = [
-  { group: "Female", voices: ["Autumn", "Melody", "Hannah", "Emily", "Kaitlyn", "Luna"] },
-  { group: "Male",   voices: ["Noah", "Jasper", "Caleb", "Ethan", "Daniel"] },
+  { group: "Female", voices: ["Skylar", "Katie", "Julia", "Rachel", "Grace", "Ella"] },
+  { group: "Male",   voices: ["Jameson", "Theo", "Parker", "Austin", "Daniel"] },
 ];
 
 interface ScenarioPreset {
@@ -68,45 +68,45 @@ interface ScenarioPreset {
 
 export const SCENARIO_PRESETS: ScenarioPreset[] = [
   // ── Family ──
-  { emoji: "🚗", title: "I crashed dad's car", category: "Family", tone: "dramatic", myName: "Son", theirName: "Dad", voiceLeft: "Daniel", voiceRight: "Caleb",
+  { emoji: "🚗", title: "I crashed dad's car", category: "Family", tone: "dramatic", myName: "Son", theirName: "Dad", voiceLeft: "Daniel", voiceRight: "Parker",
     scenario: "A son slowly confesses to his dad that he crashed the car, but every message reveals the accident was way weirder than it sounds" },
-  { emoji: "📚", title: "Mom found my report card", category: "Family", tone: "suspense", myName: "Kid", theirName: "Mom", voiceLeft: "Hannah", voiceRight: "Ethan",
+  { emoji: "📚", title: "Mom found my report card", category: "Family", tone: "suspense", myName: "Kid", theirName: "Mom", voiceLeft: "Julia", voiceRight: "Austin",
     scenario: "Mom texts her kid that the school called about grades, but the kid realizes mom knows something much bigger than a bad grade" },
-  { emoji: "📖", title: "My brother read my diary", category: "Family", tone: "savage", myName: "Sister", theirName: "Brother", voiceLeft: "Jasper", voiceRight: "Emily",
+  { emoji: "📖", title: "My brother read my diary", category: "Family", tone: "savage", myName: "Sister", theirName: "Brother", voiceLeft: "Theo", voiceRight: "Ella",
     scenario: "A sister discovers her brother read her diary and starts dropping hints that she knows HIS secret, which is far worse" },
-  { emoji: "💰", title: "Grandma's strange inheritance", category: "Family", tone: "suspense", myName: "Grandchild", theirName: "Uncle", voiceLeft: "Daniel", voiceRight: "Melody",
+  { emoji: "💰", title: "Grandma's strange inheritance", category: "Family", tone: "suspense", myName: "Grandchild", theirName: "Uncle", voiceLeft: "Daniel", voiceRight: "Rachel",
     scenario: "After grandma's funeral, an uncle texts about a locked box she left with one strange rule that must never be broken" },
-  { emoji: "🎰", title: "Lottery secret", category: "Family", tone: "dramatic", myName: "Me", theirName: "Cousin", voiceLeft: "Kaitlyn", voiceRight: "Noah",
+  { emoji: "🎰", title: "Lottery secret", category: "Family", tone: "dramatic", myName: "Me", theirName: "Cousin", voiceLeft: "Grace", voiceRight: "Jameson",
     scenario: "Finding out through a cousin that a family member won the lottery months ago and told everyone in the family except you" },
   // ── Couples ──
-  { emoji: "📱", title: "Deleted history at 3 AM", category: "Couples", tone: "dramatic", myName: "Husband", theirName: "Wife", voiceLeft: "Autumn", voiceRight: "Caleb",
+  { emoji: "📱", title: "Deleted history at 3 AM", category: "Couples", tone: "dramatic", myName: "Husband", theirName: "Wife", voiceLeft: "Katie", voiceRight: "Parker",
     scenario: "A wife asks her husband why the browser history was deleted at 3 AM, and his explanations keep making it worse until a twist reveals the truth" },
-  { emoji: "💔", title: "Saw your wife with someone", category: "Couples", tone: "dramatic", myName: "Husband", theirName: "Best friend", voiceLeft: "Noah", voiceRight: "Daniel",
+  { emoji: "💔", title: "Saw your wife with someone", category: "Couples", tone: "dramatic", myName: "Husband", theirName: "Best friend", voiceLeft: "Jameson", voiceRight: "Daniel",
     scenario: "A best friend texts that he saw the husband's wife with another man at a restaurant, but the final reveal flips everything" },
-  { emoji: "🌙", title: "Ex texting at 2 AM", category: "Couples", tone: "spicy", myName: "Me", theirName: "Ex", voiceLeft: "Luna", voiceRight: "Jasper",
+  { emoji: "🌙", title: "Ex texting at 2 AM", category: "Couples", tone: "spicy", myName: "Me", theirName: "Ex", voiceLeft: "Skylar", voiceRight: "Theo",
     scenario: "An ex texts at 2 AM saying they need to confess something they should have said during the relationship" },
   // ── Friends ──
-  { emoji: "🐍", title: "Best friend & my ex", category: "Friends", tone: "savage", myName: "Me", theirName: "Bestie", voiceLeft: "Emily", voiceRight: "Kaitlyn",
+  { emoji: "🐍", title: "Best friend & my ex", category: "Friends", tone: "savage", myName: "Me", theirName: "Bestie", voiceLeft: "Ella", voiceRight: "Grace",
     scenario: "Confronting a best friend about secretly talking to my ex, with screenshots as receipts, ending in an unexpected confession" },
-  { emoji: "🎉", title: "Ruined surprise party", category: "Friends", tone: "funny", myName: "Me", theirName: "Friend", voiceLeft: "Ethan", voiceRight: "Melody",
+  { emoji: "🎉", title: "Ruined surprise party", category: "Friends", tone: "funny", myName: "Me", theirName: "Friend", voiceLeft: "Austin", voiceRight: "Rachel",
     scenario: "A friend accidentally reveals the surprise party in the wrong group chat and tries to convince everyone it was a joke" },
-  { emoji: "🦝", title: "Raccoon in the car", category: "Funny", tone: "funny", myName: "Me", theirName: "Bro", voiceLeft: "Jasper", voiceRight: "Noah",
+  { emoji: "🦝", title: "Raccoon in the car", category: "Funny", tone: "funny", myName: "Me", theirName: "Bro", voiceLeft: "Theo", voiceRight: "Jameson",
     scenario: "Discovering a raccoon in a friend's car and the explanations keep getting more absurd until the raccoon situation escalates" },
-  { emoji: "💼", title: "Boss texting at 11 PM", category: "Drama", tone: "suspense", myName: "Employee", theirName: "Boss", voiceLeft: "Daniel", voiceRight: "Hannah",
+  { emoji: "💼", title: "Boss texting at 11 PM", category: "Drama", tone: "suspense", myName: "Employee", theirName: "Boss", voiceLeft: "Daniel", voiceRight: "Julia",
     scenario: "A boss texts an employee late at night saying they need to talk before tomorrow's meeting, and the hints get more ominous" },
   // ── Scary ──
-  { emoji: "🕳️", title: "Neighbor digging at night", category: "Scary", tone: "suspense", myName: "Me", theirName: "Neighbor", voiceLeft: "Daniel", voiceRight: "Luna",
+  { emoji: "🕳️", title: "Neighbor digging at night", category: "Scary", tone: "suspense", myName: "Me", theirName: "Neighbor", voiceLeft: "Daniel", voiceRight: "Skylar",
     scenario: "Texting a neighbor about the digging sounds from their backyard every night at 3 AM, and their answers slowly stop making sense" },
-  { emoji: "📞", title: "Wrong number knows me", category: "Scary", tone: "suspense", myName: "Me", theirName: "Unknown", voiceLeft: "Jasper", voiceRight: "Emily",
+  { emoji: "📞", title: "Wrong number knows me", category: "Scary", tone: "suspense", myName: "Me", theirName: "Unknown", voiceLeft: "Theo", voiceRight: "Ella",
     scenario: "A wrong number apologizes, then casually mentions details about my life no stranger could possibly know" },
-  { emoji: "🚪", title: "Home alone... right?", category: "Scary", tone: "suspense", myName: "Me", theirName: "Roommate", voiceLeft: "Hannah", voiceRight: "Caleb",
+  { emoji: "🚪", title: "Home alone... right?", category: "Scary", tone: "suspense", myName: "Me", theirName: "Roommate", voiceLeft: "Julia", voiceRight: "Parker",
     scenario: "Texting my roommate to stop moving things around the apartment, and they reply that they moved out last week" },
-  { emoji: "📷", title: "It wasn't me on camera", category: "Scary", tone: "dramatic", myName: "Me", theirName: "Sister", voiceLeft: "Melody", voiceRight: "Ethan",
+  { emoji: "📷", title: "It wasn't me on camera", category: "Scary", tone: "dramatic", myName: "Me", theirName: "Sister", voiceLeft: "Rachel", voiceRight: "Austin",
     scenario: "A sister sends a doorbell camera photo of me entering the house at 2 AM, but I was in another city that night" },
   // ── Drama/Mystery ──
-  { emoji: "🎭", title: "Catfish revelation", category: "Drama", tone: "dramatic", myName: "Me", theirName: "Online crush", voiceLeft: "Luna", voiceRight: "Noah",
+  { emoji: "🎭", title: "Catfish revelation", category: "Drama", tone: "dramatic", myName: "Me", theirName: "Online crush", voiceLeft: "Skylar", voiceRight: "Jameson",
     scenario: "An online crush of two years finally agrees to meet, then confesses they are not who the photos show — and the truth is stranger" },
-  { emoji: "📍", title: "GPS says you're not there", category: "Drama", tone: "dramatic", myName: "Me", theirName: "Partner", voiceLeft: "Autumn", voiceRight: "Jasper",
+  { emoji: "📍", title: "GPS says you're not there", category: "Drama", tone: "dramatic", myName: "Me", theirName: "Partner", voiceLeft: "Katie", voiceRight: "Theo",
     scenario: "A partner says they are working late, but the shared location shows them somewhere else, and every excuse contradicts the last one" },
 ];
 
@@ -508,8 +508,8 @@ export default function FakeTextVideos() {
   const [categories, setCategories]   = useState<CategoryInfo[]>([]);
 
   // Voice
-  const [voice, setVoice]             = useState("Luna");        // their voice (left bubbles)
-  const [myVoice, setMyVoice]         = useState("Noah");        // my voice (right bubbles)
+  const [voice, setVoice]             = useState("Skylar");        // their voice (left bubbles)
+  const [myVoice, setMyVoice]         = useState("Jameson");        // my voice (right bubbles)
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const audioRef = useState<HTMLAudioElement | null>(null);
 
