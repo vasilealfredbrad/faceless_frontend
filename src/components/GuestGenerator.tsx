@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { guestGenerate, getDemoVideos, GuestJobStatus, DemoVideo, demoThumbUrl, demoVideoUrl, WordEffectMode } from "../lib/api";
+import { guestGenerate, getDemoVideos, GuestJobStatus, DemoVideo, demoThumbUrl, demoVideoUrl, WordEffectMode, getVoiceDemoUrl } from "../lib/api";
+import { VOICE_LANGUAGES } from "../lib/voices.gen";
+import { voiceName, voiceGroupsFor } from "../lib/voice-utils";
 import { supabase } from "../lib/supabase";
 import {
   Wand2,
@@ -21,12 +23,6 @@ import {
 } from "lucide-react";
 import VOICE_DEMO_FILES from "../lib/voice-demos";
 import { containsProfanity } from "../lib/profanity";
-
-const VOICES = [
-  { group: "American Female", voices: ["Skylar", "Katie", "Julia", "Ella", "Rachel", "Grace", "Lauren", "Michelle", "Jessica", "Caroline"] },
-  { group: "American Male", voices: ["Jameson", "Theo", "Parker", "Austin", "Daniel", "Zander", "Rowan"] },
-  { group: "British", voices: ["Gemma", "Archie"] },
-];
 
 const SUBTITLE_PRESETS = [
   { key: "classic", label: "Classic" },
@@ -235,7 +231,8 @@ interface GuestGeneratorProps {
 
 export default function GuestGenerator({ sectionRef }: GuestGeneratorProps) {
   const [topic, setTopic] = useState("");
-  const [voice, setVoice] = useState("Parker");
+  const [voice, setVoice] = useState("30894953-bcce-41fe-892c-15ce19c843ff"); // Parker (en)
+  const [voiceLang, setVoiceLang] = useState("en");
   const [subtitlePreset, setSubtitlePreset] = useState("classic");
   const [wordEffectMode, setWordEffectMode] = useState<WordEffectMode>("combo");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
@@ -278,7 +275,7 @@ export default function GuestGenerator({ sectionRef }: GuestGeneratorProps) {
     };
   }, []);
 
-  function handlePlayVoiceDemo(targetVoice?: string) {
+  async function handlePlayVoiceDemo(targetVoice?: string) {
     const demoVoice = targetVoice || voice;
     if (playingVoice === demoVoice && previewAudioRef.current) {
       previewAudioRef.current.pause();
@@ -287,8 +284,14 @@ export default function GuestGenerator({ sectionRef }: GuestGeneratorProps) {
       return;
     }
 
-    const demoUrl = VOICE_DEMO_FILES[demoVoice];
-    if (!demoUrl) return;
+    let demoUrl: string | undefined = VOICE_DEMO_FILES[voiceName(demoVoice)];
+    if (!demoUrl) {
+      try {
+        demoUrl = await getVoiceDemoUrl(demoVoice);
+      } catch {
+        return;
+      }
+    }
 
     if (previewAudioRef.current) previewAudioRef.current.pause();
     let audio = audioCacheRef.current.get(demoUrl);
@@ -527,34 +530,50 @@ export default function GuestGenerator({ sectionRef }: GuestGeneratorProps) {
                 <Mic className="w-4 h-4" />
                 Voice
               </label>
+              <select
+                value={voiceLang}
+                onChange={(e) => {
+                  const code = e.target.value;
+                  setVoiceLang(code);
+                  const first = voiceGroupsFor(code)[0]?.voices[0];
+                  if (first) setVoice(first.id);
+                }}
+                disabled={loading}
+                className="w-full mb-2 px-3 py-2 rounded-xl bg-surface-card border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50"
+              >
+                {VOICE_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>{l.label} ({l.voices.length})</option>
+                ))}
+              </select>
               <div className="max-h-[220px] overflow-y-auto rounded-xl border border-white/10 bg-surface-card p-3 space-y-3 pr-1">
-                {VOICES.map((group) => (
+                {voiceGroupsFor(voiceLang).map((group) => (
                   <div key={group.group}>
                     <p className="text-[11px] text-white/30 mb-1.5">{group.group}</p>
                     <div className="flex flex-wrap gap-2">
                       {group.voices.map((v) => {
-                        const isSelected = voice === v;
-                        const isPlaying = playingVoice === v;
+                        const isSelected = voice === v.id;
+                        const isPlaying = playingVoice === v.id;
                         return (
                           <div
-                            key={v}
+                            key={v.id}
                             className={`flex items-center rounded-lg border ${
                               isSelected ? "border-primary/50 bg-primary/15" : "border-white/10 bg-surface"
                             }`}
                           >
                             <button
                               type="button"
-                              onClick={() => setVoice(v)}
+                              onClick={() => setVoice(v.id)}
                               disabled={loading}
+                              title={v.tagline}
                               className={`px-2.5 py-1.5 text-xs font-semibold ${
                                 isSelected ? "text-primary" : "text-white/70 hover:text-white"
                               } disabled:opacity-50`}
                             >
-                              {v}
+                              {v.name}
                             </button>
                             <button
                               type="button"
-                              onClick={() => handlePlayVoiceDemo(v)}
+                              onClick={() => handlePlayVoiceDemo(v.id)}
                               disabled={loading}
                               className="px-2 py-1.5 border-l border-white/10 text-white/50 hover:text-white disabled:opacity-50"
                               title={isPlaying ? "Stop demo" : "Play demo"}

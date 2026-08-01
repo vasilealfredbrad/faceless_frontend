@@ -328,6 +328,16 @@ export interface CategoryInfo {
 
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
 
+/** On-demand voice preview: the backend synthesizes (and caches) a short
+ *  sample for any catalog voice and returns its URL. */
+export async function getVoiceDemoUrl(voice: string): Promise<string> {
+  const res = await fetch(`${BACKEND_URL}/api/voice-demo?voice=${encodeURIComponent(voice)}`);
+  if (!res.ok) throw new Error("Voice demo failed");
+  const data = await res.json();
+  if (!data?.url) throw new Error("Voice demo URL missing");
+  return data.url;
+}
+
 export interface GuestJobStatus {
   id: string;
   status: string;

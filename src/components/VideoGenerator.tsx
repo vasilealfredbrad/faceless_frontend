@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
-import { generateVideo, GenerateRequest, getCategories, CategoryInfo, BulkProgress, WordEffectMode, SubtitleSize, getQueuePosition, QueuePosition } from "../lib/api";
+import { generateVideo, GenerateRequest, getCategories, CategoryInfo, BulkProgress, WordEffectMode, SubtitleSize, getQueuePosition, QueuePosition, getVoiceDemoUrl } from "../lib/api";
 import { containsProfanity } from "../lib/profanity";
 import VOICE_DEMO_FILES from "../lib/voice-demos";
+import { VOICE_LANGUAGES } from "../lib/voices.gen";
+import { voiceName, voiceGroupsFor, DEFAULT_VOICE_ID } from "../lib/voice-utils";
 import {
   Wand2,
   Download,
@@ -24,12 +26,6 @@ import {
 } from "lucide-react";
 
 type FormTab = "content" | "voice" | "subtitles";
-
-const VOICES = [
-  { group: "American Female", voices: ["Skylar", "Katie", "Julia", "Ella", "Rachel", "Grace", "Lauren", "Michelle", "Jessica", "Caroline"] },
-  { group: "American Male", voices: ["Jameson", "Theo", "Parker", "Austin", "Daniel", "Zander", "Rowan"] },
-  { group: "British", voices: ["Gemma", "Archie"] },
-];
 
 const SUBTITLE_PRESETS = [
   { key: "classic", label: "Classic", desc: "Montserrat · Bold · Yellow highlight" },
@@ -157,7 +153,8 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
   const [activeTab, setActiveTab] = useState<FormTab>("content");
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState<30 | 60>(30);
-  const [voice, setVoice] = useState("Jameson");
+  const [voice, setVoice] = useState(DEFAULT_VOICE_ID);
+  const [voiceLang, setVoiceLang] = useState("en");
   const [background, setBackground] = useState("minecraft");
   const [variations, setVariations] = useState(1);
   const [subtitlePreset, setSubtitlePreset] = useState("classic");
@@ -247,7 +244,7 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
 
   const activeStep = getActiveStep(progress);
 
-  function handlePlayVoiceDemo(targetVoice?: string) {
+  async function handlePlayVoiceDemo(targetVoice?: string) {
     const demoVoice = targetVoice || voice;
     if (playingVoice === demoVoice && previewAudioRef.current) {
       previewAudioRef.current.pause();
@@ -256,8 +253,16 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
       return;
     }
 
-    const demoUrl = VOICE_DEMO_FILES[demoVoice];
-    if (!demoUrl) return;
+    // Static demo file when we have one (the featured voices); otherwise the
+    // backend synthesizes a sample on demand and returns its URL.
+    let demoUrl: string | undefined = VOICE_DEMO_FILES[voiceName(demoVoice)];
+    if (!demoUrl) {
+      try {
+        demoUrl = await getVoiceDemoUrl(demoVoice);
+      } catch {
+        return;
+      }
+    }
 
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
@@ -502,16 +507,35 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
           {activeTab === "voice" && (
             <>
               <div className="space-y-4">
-                {VOICES.map((group) => (
+                <div>
+                  <p className="text-[11px] font-semibold text-white/30 uppercase tracking-wider mb-2">Language</p>
+                  <select
+                    value={voiceLang}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setVoiceLang(code);
+                      const first = voiceGroupsFor(code)[0]?.voices[0];
+                      if (first) setVoice(first.id);
+                    }}
+                    disabled={loading}
+                    className="w-full px-4 py-2.5 rounded-xl bg-surface-card border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                  >
+                    {VOICE_LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>{l.label} ({l.voices.length})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="max-h-[340px] overflow-y-auto space-y-4 pr-1">
+                {voiceGroupsFor(voiceLang).map((group) => (
                   <div key={group.group}>
                     <p className="text-[11px] font-semibold text-white/30 uppercase tracking-wider mb-2">{group.group}</p>
                     <div className="flex flex-wrap gap-2">
                       {group.voices.map((v) => {
-                        const isSelected = voice === v;
-                        const isPlaying = playingVoice === v;
+                        const isSelected = voice === v.id;
+                        const isPlaying = playingVoice === v.id;
                         return (
                           <div
-                            key={v}
+                            key={v.id}
                             className={`flex items-center rounded-lg border transition-colors ${
                               isSelected
                                 ? "border-primary/50 bg-primary/15"
@@ -520,17 +544,18 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
                           >
                             <button
                               type="button"
-                              onClick={() => setVoice(v)}
+                              onClick={() => setVoice(v.id)}
                               disabled={loading}
+                              title={v.tagline}
                               className={`px-3 py-2 text-xs font-semibold ${
                                 isSelected ? "text-primary" : "text-white/65 hover:text-white"
                               } disabled:opacity-50`}
                             >
-                              {v}
+                              {v.name}
                             </button>
                             <button
                               type="button"
-                              onClick={() => handlePlayVoiceDemo(v)}
+                              onClick={() => handlePlayVoiceDemo(v.id)}
                               disabled={loading}
                               className="px-2 py-2 border-l border-white/10 text-white/40 hover:text-white transition-colors disabled:opacity-50"
                               title={isPlaying ? "Stop" : "Preview"}
@@ -543,6 +568,7 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
 
               {/* Selected voice preview */}
@@ -559,7 +585,7 @@ export default function VideoGenerator({ session, onNeedAuth, onVideoGenerated }
                     <><Play className="w-3.5 h-3.5" /> Preview</>
                   )}
                 </button>
-                <span className="text-xs text-white/30">Selected: <span className="text-white/60 font-medium">{voice}</span></span>
+                <span className="text-xs text-white/30">Selected: <span className="text-white/60 font-medium">{voiceName(voice)}</span></span>
               </div>
             </>
           )}
