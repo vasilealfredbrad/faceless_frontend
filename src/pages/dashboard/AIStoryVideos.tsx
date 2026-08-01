@@ -5,6 +5,7 @@ import VideoGenerator from "../../components/VideoGenerator";
 import {
   getUserJobs,
   getSignedVideoUrl,
+  getFreshThumbnails,
   getMyProfile,
   JobRecord,
   UserProfile,
@@ -74,6 +75,10 @@ function VideoCard({
 }) {
   const isCompleted = job.status === "completed";
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // A new (freshly signed) URL deserves a retry after an earlier failure.
+  useEffect(() => setImgError(false), [job.thumbnail_url]);
 
   const dateStr = new Date(job.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const timeStr = new Date(job.created_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
@@ -84,7 +89,7 @@ function VideoCard({
         onClick={onClick}
         className="relative aspect-[9/16] rounded-xl overflow-hidden border border-white/10 hover:border-white/25 cursor-pointer transition-all bg-surface"
       >
-        {isCompleted && job.thumbnail_url ? (
+        {isCompleted && job.thumbnail_url && !imgError ? (
           <>
             <img
               src={job.thumbnail_url}
@@ -92,6 +97,7 @@ function VideoCard({
               className="w-full h-full object-cover"
               loading="lazy"
               onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
             />
             {!imgLoaded && (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -322,6 +328,17 @@ export default function AIStoryVideos({ session }: Props) {
     try {
       const data = await getUserJobs();
       setJobs(data);
+      // Stored thumbnail links expire after 7 days — swap in freshly signed
+      // ones (single batch call), so old videos keep their thumbnails.
+      const thumbIds = data
+        .filter((j) => j.status === "completed" && j.thumbnail_url)
+        .map((j) => j.id);
+      const fresh = await getFreshThumbnails(thumbIds);
+      if (Object.keys(fresh).length > 0) {
+        setJobs((prev) =>
+          prev.map((j) => (fresh[j.id] ? { ...j, thumbnail_url: fresh[j.id] } : j))
+        );
+      }
     } catch {
       // silently fail
     } finally {

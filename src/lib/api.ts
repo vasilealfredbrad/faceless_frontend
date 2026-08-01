@@ -303,6 +303,29 @@ export async function getUserJobs(): Promise<JobRecord[]> {
   return (data || []) as JobRecord[];
 }
 
+/** Fresh signed URLs for job thumbnails, in one batch — the stored
+ *  thumbnail_url links expire after 7 days. */
+export async function getFreshThumbnails(jobIds: string[]): Promise<Record<string, string>> {
+  if (jobIds.length === 0) return {};
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+    const res = await fetch(`${BACKEND_URL}/api/signed-thumbs`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ jobIds }),
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    return data.urls || {};
+  } catch {
+    return {};
+  }
+}
+
 export async function getSignedVideoUrl(jobId: string): Promise<string | null> {
   try {
     const headers: Record<string, string> = {};
